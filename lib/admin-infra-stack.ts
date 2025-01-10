@@ -166,7 +166,7 @@ export class AdminInfraStack extends cdk.Stack {
             ],
           },
           arfifacts: {
-            "base-directory": "build",
+            "base-directory": "dist",
             files: ["**/*"],
           },
         },

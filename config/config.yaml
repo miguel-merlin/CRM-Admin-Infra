@@ -1,10 +1,10 @@
 stack:
-  name: "CRM Admin Stack"
+  name: "crm-admin"
   account: 183631317390
   region: us-west-1
 
 githubRepoOwner: "miguel-merlin"
-githubRepoName: 
+githubRepoName: CRM-Admin
 githubAccessTokenName: prod/github-access-token
 
 dev:
