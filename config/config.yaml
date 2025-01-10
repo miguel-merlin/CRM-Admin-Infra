@@ -6,3 +6,29 @@ stack:
 githubRepoOwner: "miguel-merlin"
 githubRepoName: 
 githubAccessTokenName: prod/github-access-token
+
+dev:
+  deploy: false
+  environmentType: dev
+  branchName: dev
+  pipelineConfig:
+    name: crm-admin-dev-pipeline
+  s3Config:
+    bucketName: crm-admin-dev-artifacts
+    artifactsBucket: crm-admin-dev-artifacts-bucket
+    publicAccess: false
+    indexFile: index.html
+    errorFile: index.html
+
+prod:
+  deploy: true
+  environmentType: prod
+  branchName: main
+  pipelineConfig:
+    name: crm-admin-prod-pipeline
+  s3Config:
+    bucketName: crm-admin-prod-artifacts
+    artifactsBucket: crm-admin-prod-artifacts-bucket
+    publicAccess: true
+    indexFile: index.html
+    errorFile: index.html
