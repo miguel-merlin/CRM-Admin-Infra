@@ -149,7 +149,7 @@ export class AdminInfraStack extends cdk.Stack {
 
   private _createBuildProject(distribution: Distribution) {
     const buildOutput = new Artifact();
-    const buildProject = new Project(this, "react-code-build-project", {
+    const buildProject = new Project(this, "crm-admin-code-build-project", {
       buildSpec: BuildSpec.fromObject({
         version: "0.2",
         phases: {
