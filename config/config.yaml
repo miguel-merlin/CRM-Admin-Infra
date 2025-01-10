@@ -1,0 +1,8 @@
+stack:
+  name: "CRM Admin Stack"
+  account: 183631317390
+  region: us-west-1
+
+githubRepoOwner: "miguel-merlin"
+githubRepoName: 
+githubAccessTokenName: prod/github-access-token
