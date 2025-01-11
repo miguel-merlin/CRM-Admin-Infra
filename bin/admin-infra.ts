@@ -9,6 +9,7 @@ const envConfigs = [devProps, prodProps];
 envConfigs.forEach((envConfig) => {
   if (envConfig.isDeploy) {
     const stackName = envConfig.stackName;
+    console.log(`Deploying stack: ${stackName}`);
     new AdminInfraStack(app, stackName, {
       ...envConfig,
       description: `CRM Admin Infra Stack for ${envConfig.environmentType}`,

@@ -1,4 +1,11 @@
-import * as cdk from "aws-cdk-lib";
+import {
+  CfnOutput,
+  Duration,
+  RemovalPolicy,
+  SecretValue,
+  Stack,
+  StackProps,
+} from "aws-cdk-lib";
 import {
   Distribution,
   OriginAccessIdentity,
@@ -22,7 +29,7 @@ import {
 } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
-interface ReactDeploymentCICDStackProps extends cdk.StackProps {
+interface AdminInfraStackProps extends StackProps {
   environmentType: string;
   branch: string;
   pipelineName: string;
@@ -36,16 +43,15 @@ interface ReactDeploymentCICDStackProps extends cdk.StackProps {
   githubAccessToken: string;
 }
 
-export class AdminInfraStack extends cdk.Stack {
-  constructor(
-    scope: Construct,
-    id: string,
-    props: ReactDeploymentCICDStackProps
-  ) {
+export class AdminInfraStack extends Stack {
+  constructor(scope: Construct, id: string, props: AdminInfraStackProps) {
     super(scope, id, props);
+
+    /*------------------------react deployment---------------------------*/
     const webBucket = this._createWebBucket(props);
     const distribution = this._createCloudFrontDistribution(webBucket);
 
+    /*------------------------codepipeline/cicd--------------------------*/
     const { sourceOutput, sourceAction } = this._createSourceAction(props);
     const { buildOutput, buildProject } =
       this._createBuildProject(distribution);
@@ -63,17 +69,19 @@ export class AdminInfraStack extends cdk.Stack {
       webBucket,
       distribution
     );
-    this._outCloudfrontUrl(distribution);
-    this._outS3BucketUrl(webBucket);
+    this._outCloudfrontURL(distribution);
+    this._outS3BucketURL(webBucket);
   }
 
-  private _createWebBucket(props: ReactDeploymentCICDStackProps) {
+  /*--------------------------react deployment---------------------------*/
+  private _createWebBucket(props: AdminInfraStackProps) {
     const { bucketName, indexFile, errorFile, publicAccess } = props;
+
     const webBucket = new Bucket(this, bucketName, {
       websiteIndexDocument: indexFile,
       websiteErrorDocument: errorFile,
       publicReadAccess: publicAccess,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
       blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
       accessControl: BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       encryption: BucketEncryption.S3_MANAGED,
@@ -114,13 +122,13 @@ export class AdminInfraStack extends cdk.Stack {
             httpStatus: 404,
             responseHttpStatus: 404,
             responsePagePath: "/index.html",
-            ttl: cdk.Duration.seconds(300),
+            ttl: Duration.seconds(300),
           },
           {
             httpStatus: 403,
             responseHttpStatus: 500,
             responsePagePath: "/index.html",
-            ttl: cdk.Duration.seconds(300),
+            ttl: Duration.seconds(300),
           },
         ],
         priceClass: PriceClass.PRICE_CLASS_100,
@@ -130,7 +138,8 @@ export class AdminInfraStack extends cdk.Stack {
     return distribution;
   }
 
-  private _createSourceAction(props: ReactDeploymentCICDStackProps) {
+  /*--------------------------codepipeline/cicd---------------------------*/
+  private _createSourceAction(props: AdminInfraStackProps) {
     const { githubRepoOwner, githubRepoName, githubAccessToken, branch } =
       props;
     const sourceOutput = new Artifact();
@@ -139,7 +148,7 @@ export class AdminInfraStack extends cdk.Stack {
       owner: githubRepoOwner,
       repo: githubRepoName,
       branch: branch,
-      oauthToken: cdk.SecretValue.secretsManager(githubAccessToken),
+      oauthToken: SecretValue.secretsManager(githubAccessToken),
       output: sourceOutput,
     });
 
@@ -151,7 +160,7 @@ export class AdminInfraStack extends cdk.Stack {
 
   private _createBuildProject(distribution: Distribution) {
     const buildOutput = new Artifact();
-    const buildProject = new Project(this, "crm-admin-codebuild-project", {
+    const buildProject = new Project(this, "react-codebuild-project", {
       buildSpec: BuildSpec.fromObject({
         version: "0.2",
         phases: {
@@ -229,16 +238,11 @@ export class AdminInfraStack extends cdk.Stack {
     deployAction: S3DeployAction,
     sourceAction: GitHubSourceAction,
     buildAction: CodeBuildAction,
-    props: ReactDeploymentCICDStackProps,
+    props: AdminInfraStackProps,
     bucket: Bucket,
     distribution: Distribution
   ) {
-    const { pipelineName, pipelineBucket } = props;
-    const getPipelineBucket = Bucket.fromBucketName(
-      this,
-      "pipeline-existing-artifacts-bucket",
-      pipelineBucket
-    );
+    const { pipelineName } = props;
 
     const stages = [
       { stageName: "Source", actions: [sourceAction] },
@@ -248,23 +252,23 @@ export class AdminInfraStack extends cdk.Stack {
 
     const codePipeline = new Pipeline(this, "codepipeline", {
       pipelineName: pipelineName,
-      artifactBucket: getPipelineBucket,
       stages,
     });
 
     codePipeline.node.addDependency(bucket, distribution);
   }
 
-  private _outCloudfrontUrl(distribution: Distribution) {
-    new cdk.CfnOutput(this, "cloudfront-web-url", {
+  private _outCloudfrontURL(distribution: Distribution) {
+    new CfnOutput(this, "cloudfront-web-url", {
       value: distribution.distributionDomainName,
       description: "cloudfront website url",
     });
   }
-  private _outS3BucketUrl(bucket: Bucket) {
-    new cdk.CfnOutput(this, "s3-bucket-url", {
+
+  private _outS3BucketURL(bucket: Bucket) {
+    new CfnOutput(this, "s3-bucket-web-url", {
       value: bucket.bucketWebsiteUrl,
-      description: "s3 bucket url",
+      description: "s3 bucket website url",
     });
   }
 }
