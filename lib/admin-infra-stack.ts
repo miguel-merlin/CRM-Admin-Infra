@@ -95,7 +95,8 @@ export class AdminInfraStack extends cdk.Stack {
         ],
       })
     );
-    const s3origin = new S3Origin(bucket, {
+
+    const s3Origin = new S3Origin(bucket, {
       originAccessIdentity: oai,
     });
 
@@ -104,7 +105,7 @@ export class AdminInfraStack extends cdk.Stack {
       "react-deployment-distribution",
       {
         defaultBehavior: {
-          origin: s3origin,
+          origin: s3Origin,
           viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
         defaultRootObject: "index.html",
@@ -125,6 +126,7 @@ export class AdminInfraStack extends cdk.Stack {
         priceClass: PriceClass.PRICE_CLASS_100,
       }
     );
+
     return distribution;
   }
 
@@ -133,7 +135,7 @@ export class AdminInfraStack extends cdk.Stack {
       props;
     const sourceOutput = new Artifact();
     const sourceAction = new GitHubSourceAction({
-      actionName: "GitHub_Source",
+      actionName: "GitHub",
       owner: githubRepoOwner,
       repo: githubRepoName,
       branch: branch,
@@ -149,7 +151,7 @@ export class AdminInfraStack extends cdk.Stack {
 
   private _createBuildProject(distribution: Distribution) {
     const buildOutput = new Artifact();
-    const buildProject = new Project(this, "crm-admin-code-build-project", {
+    const buildProject = new Project(this, "crm-admin-codebuild-project", {
       buildSpec: BuildSpec.fromObject({
         version: "0.2",
         phases: {
@@ -165,16 +167,25 @@ export class AdminInfraStack extends cdk.Stack {
               `aws cloudfront create-invalidation --distribution-id ${distribution.distributionId} --paths '/*'`,
             ],
           },
-          arfifacts: {
-            "base-directory": "dist",
-            files: ["**/*"],
-          },
+        },
+        artifacts: {
+          "base-directory": "dist",
+          files: ["**/*"],
         },
       }),
       environment: {
         buildImage: LinuxBuildImage.STANDARD_5_0,
       },
     });
+
+    buildProject.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["cloudfront:CreateInvalidation"],
+        resources: [
+          `arn:aws:cloudfront::${this.account}:distribution/${distribution.distributionId}`,
+        ],
+      })
+    );
 
     buildProject.addToRolePolicy(
       new PolicyStatement({
@@ -200,15 +211,17 @@ export class AdminInfraStack extends cdk.Stack {
       input: sourceOutput,
       outputs: [buildOutput],
     });
+
     return buildAction;
   }
 
   private _createDeployAction(buildOutput: Artifact, bucket: Bucket) {
     const deployAction = new S3DeployAction({
-      actionName: "DeploytToS3",
+      actionName: "DeployToS3",
       input: buildOutput,
       bucket: bucket,
     });
+
     return deployAction;
   }
 
@@ -223,20 +236,22 @@ export class AdminInfraStack extends cdk.Stack {
     const { pipelineName, pipelineBucket } = props;
     const getPipelineBucket = Bucket.fromBucketName(
       this,
-      "pipeline-existing-artifact-bucket",
+      "pipeline-existing-artifacts-bucket",
       pipelineBucket
     );
+
     const stages = [
       { stageName: "Source", actions: [sourceAction] },
       { stageName: "Build", actions: [buildAction] },
       { stageName: "Deploy", actions: [deployAction] },
     ];
 
-    const codePipeline = new Pipeline(this, "admincodepipeline", {
+    const codePipeline = new Pipeline(this, "codepipeline", {
       pipelineName: pipelineName,
       artifactBucket: getPipelineBucket,
       stages,
     });
+
     codePipeline.node.addDependency(bucket, distribution);
   }
 
