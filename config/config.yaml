@@ -5,7 +5,7 @@ stack:
 
 githubRepoOwner: "miguel-merlin"
 githubRepoName: CRM-Admin
-githubAccessTokenName: prod/github-access-token
+githubAccessTokenName: prod/gh-access-token
 
 dev:
   deploy: false
