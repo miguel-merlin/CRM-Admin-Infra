@@ -110,7 +110,7 @@ export class AdminInfraStack extends Stack {
 
     const distribution = new Distribution(
       this,
-      "react-deployment-distribution",
+      "crm-admin-deployment-distribution",
       {
         defaultBehavior: {
           origin: s3Origin,
@@ -160,15 +160,18 @@ export class AdminInfraStack extends Stack {
 
   private _createBuildProject(distribution: Distribution) {
     const buildOutput = new Artifact();
-    const buildProject = new Project(this, "react-codebuild-project", {
+    const buildProject = new Project(this, "crm-admin-codebuild-project", {
       buildSpec: BuildSpec.fromObject({
         version: "0.2",
         phases: {
           install: {
+            "runtime-versions": {
+              nodejs: "latest",
+            },
             commands: ['echo "installing npm dependencies"', "npm install"],
           },
           build: {
-            commands: ['echo "building react app"', "npm run build"],
+            commands: ['echo "building app"', "npm run build"],
           },
           post_build: {
             commands: [
@@ -183,7 +186,7 @@ export class AdminInfraStack extends Stack {
         },
       }),
       environment: {
-        buildImage: LinuxBuildImage.STANDARD_5_0,
+        buildImage: LinuxBuildImage.AMAZON_LINUX_2_5,
       },
     });
 
