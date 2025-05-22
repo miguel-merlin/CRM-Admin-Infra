@@ -28,6 +28,8 @@ import {
   BucketEncryption,
 } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
+import * as dotenv from "dotenv";
+import path = require("path");
 
 interface AdminInfraStackProps extends StackProps {
   environmentType: string;
@@ -159,6 +161,7 @@ export class AdminInfraStack extends Stack {
   }
 
   private _createBuildProject(distribution: Distribution) {
+    const envVarianbles = loadEnvFile();
     const buildOutput = new Artifact();
     const buildProject = new Project(this, "crm-admin-codebuild-project", {
       buildSpec: BuildSpec.fromObject({
@@ -187,6 +190,10 @@ export class AdminInfraStack extends Stack {
       }),
       environment: {
         buildImage: LinuxBuildImage.AMAZON_LINUX_2_5,
+        privileged: true,
+        environmentVariables: {
+          ...envVarianbles,
+        },
       },
     });
 
@@ -274,4 +281,25 @@ export class AdminInfraStack extends Stack {
       description: "s3 bucket website url",
     });
   }
+}
+
+function convertEnvVariables(env: dotenv.DotenvParseOutput): {
+  [key: string]: { value: string };
+} {
+  return Object.keys(env).reduce((acc, key) => {
+    acc[key] = { value: env[key] };
+    return acc;
+  }, {} as { [key: string]: { value: string } });
+}
+
+function loadEnvFile() {
+  const envFilePath = path.join(__dirname, "../config/.env");
+  const result = dotenv.config({ path: envFilePath });
+  if (result.error) {
+    throw result.error;
+  }
+  if (!result.parsed) {
+    throw new Error("Failed to load environment variables from .env file");
+  }
+  return convertEnvVariables(result.parsed);
 }
