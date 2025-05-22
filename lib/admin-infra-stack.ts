@@ -190,7 +190,6 @@ export class AdminInfraStack extends Stack {
       }),
       environment: {
         buildImage: LinuxBuildImage.AMAZON_LINUX_2_5,
-        privileged: true,
         environmentVariables: {
           ...envVarianbles,
         },
